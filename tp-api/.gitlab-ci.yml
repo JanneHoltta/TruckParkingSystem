@@ -1,0 +1,23 @@
+stages:
+  - lint
+  - publish
+
+lint:
+  stage: lint
+  image: node:16
+  tags:
+    - multiarch
+  script:
+    - npm install
+    - npm run lint
+
+publish:
+  stage: publish
+  image: node:16
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  script:
+  - npm install
+  - npm config set @truck-parking:registry "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/"
+  - npm config set -- "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken" "${CI_JOB_TOKEN}"
+  - npm publish

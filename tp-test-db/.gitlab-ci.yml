@@ -1,0 +1,39 @@
+stages:
+  - build
+  - deploy-staging
+
+build:
+  stage: build
+  image: gitlab.yobitti.fi:5001/tools/docker-make
+  services:
+    - docker:dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH != null'
+    - if: '$CI_COMMIT_TAG != null'
+  script:
+    - make build-push-ci
+
+deploy-staging:
+  stage: deploy-staging
+  image: alpine:3
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+#    - if: '$CI_COMMIT_BRANCH == ""' # Add your branch here to enable automatic deployment to staging while developing a feature. Remember to comment after use!
+    - if: '$CI_COMMIT_BRANCH != null'
+      when: manual
+      allow_failure: true # Manual deployments are always optional
+  script:
+    - CI_PROJECT_NAME="tp-db"
+    - apk --no-cache add openssh
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "docker login $CI_REGISTRY -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD"
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "IMAGE_TAG=:$CI_COMMIT_REF_SLUG docker-compose -f /docker/truck-parking/docker-compose.yml pull $CI_PROJECT_NAME"
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "IMAGE_TAG=:$CI_COMMIT_REF_SLUG docker-compose -f /docker/truck-parking/docker-compose.yml up -d $CI_PROJECT_NAME"
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "docker logout $CI_REGISTRY"
+  environment:
+    name: Staging

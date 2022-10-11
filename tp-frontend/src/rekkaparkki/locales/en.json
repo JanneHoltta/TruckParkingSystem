@@ -1,0 +1,13 @@
+{
+    "global-companyName": "Truck Parking",
+
+    "home-body1": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus quis nisl vel tortor mattis tincidunt non lobortis urna. Nunc nibh odio, dictum at efficitur ac, euismod et tortor.",
+    "home-body2": "Sed condimentum erat magna, pellentesque sodales turpis fermentum vel. Sed ex nibh, imperdiet ut ullamcorper quis, suscipit et justo. Donec ac ante at erat scelerisque sodales id ut velit. Etiam scelerisque consequat urna, in lobortis sem placerat sed. Duis gravida, nulla sit amet pulvinar tempus, dolor velit iaculis tortor, eu sagittis turpis risus ac lorem.",
+    "home-body3": "Vivamus fringilla tellus ac massa varius, nec bibendum nisi varius. Proin vel lorem metus. Nullam fermentum, nibh sed scelerisque semper, lectus tellus semper eros, sed mollis magna nisl sed libero.",
+    "home-bodyHeading": "How does the Truck Parking area work?",
+    "home-heading": "Welcome to",
+
+    "instructions-heading": "How to use Truck Parking?",
+
+    "logIn-toSignUp": "New to Truck Parking?"
+}

@@ -1,0 +1,54 @@
+{
+  "name": "tp-server",
+  "version": "0.1.0",
+  "description": "Truck Parking Access Control System Server",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "jest tests/unit",
+    "test:ci": "jest tests/unit --coverage --ci --watchAll=false",
+    "integration": "jest tests/integration",
+    "integration:ci": "jest tests/integration --ci --watchAll=false",
+    "lint": "npx eslint src tests .",
+    "lint:fix": "npx eslint src tests . --fix",
+    "prepare": "[ -n \"$NPM_REPO\" ] || husky install",
+    "dev": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.yobitti.fi:truck-parking/tp-server.git"
+  },
+  "author": "YO-bitti Oy",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/jest": "^27.0.3",
+    "@types/node": "^16.11.7",
+    "@types/supertest": "^2.0.11",
+    "@typescript-eslint/eslint-plugin": "^4.33.0",
+    "@typescript-eslint/parser": "^4.33.0",
+    "dotenv": "^10.0.0",
+    "eslint": "^7.32.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-airbnb-typescript": "^14.0.1",
+    "eslint-plugin-import": "^2.25.2",
+    "husky": "^7.0.4",
+    "jest": "^27.4.2",
+    "jest-extended": "^2.0.0",
+    "jest-junit": "^13.0.0",
+    "lint-staged": "^12.1.2",
+    "nodemon": "^2.0.15",
+    "supertest": "^6.2.1",
+    "ts-jest": "^27.0.7",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@truck-parking/tp-api": "^5.0.4",
+    "argon2": "^0.28.3",
+    "axios": "^0.26.1",
+    "fastify": "^3.27.0",
+    "fastify-plugin": "^3.0.0",
+    "knex": "^0.95.14",
+    "mysql2": "^2.3.3",
+    "objection": "^3.0.0"
+  }
+}

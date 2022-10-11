@@ -1,0 +1,90 @@
+# These are defined mostly for cosmetic purposes
+stages:
+  - test
+  - build
+  - e2e
+  - accessibility
+  - deploy
+
+include:
+  - /.build-ci.yml
+
+lint:
+  stage: test
+  needs: [] # The DAG visualization requires these empty needs definitions
+  image: node:16
+  script:
+    - echo -e "$NPM_REPO" > ~/.npmrc
+    - npm install
+    - npm run lint
+
+test-unit:
+  stage: test
+  needs: []
+  image: node:16
+  script:
+    - echo -e "$NPM_REPO" > ~/.npmrc
+    - npm install
+    - npm run test
+
+build-rekkaparkki:
+  needs: [lint, test-unit]
+  extends: .build
+  variables:
+    APP: rekkaparkki
+
+e2e-rekkaparkki:
+  needs: [build-rekkaparkki]
+  extends: .e2e
+  variables:
+    APP: rekkaparkki
+
+trigger-e2e-rekkaparkki:
+  needs: [build-rekkaparkki]
+  extends: .trigger-e2e
+  variables:
+    APP: rekkaparkki
+
+a11y-rekkaparkki:
+  needs: [build-rekkaparkki]
+  extends: .a11y
+  variables:
+    APP: rekkaparkki
+
+deploy-rekkaparkki:
+  needs: [e2e-rekkaparkki]
+  extends: .deploy-staging
+  variables:
+    APP: rekkaparkki
+    APP_URL: https://staging.rekkaparkki.com
+
+build-portofhelsinki:
+  needs: [lint, test-unit]
+  extends: .build
+  variables:
+    APP: portofhelsinki
+
+e2e-portofhelsinki:
+  needs: [build-portofhelsinki]
+  extends: .e2e
+  variables:
+    APP: portofhelsinki
+
+trigger-e2e-portofhelsinki:
+  needs: [build-portofhelsinki]
+  extends: .trigger-e2e
+  variables:
+    APP: portofhelsinki
+
+a11y-portofhelsinki:
+  needs: [build-portofhelsinki]
+  extends: .a11y
+  variables:
+    APP: portofhelsinki
+
+deploy-portofhelsinki:
+  needs: [e2e-portofhelsinki]
+  extends: .deploy-staging
+  variables:
+    APP: portofhelsinki
+    APP_URL: https://frontend.remote-dev.yobitti.fi

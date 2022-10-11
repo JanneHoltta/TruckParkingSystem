@@ -1,0 +1,131 @@
+.build:
+  stage: build
+  image: gitlab.yobitti.fi:5001/tools/docker-make
+  services:
+    - docker:dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH != null'
+    - if: '$CI_COMMIT_TAG != null'
+  script:
+    - make build-push-ci
+
+.e2e:
+  stage: e2e
+  image:
+    name: testcafe/testcafe
+    entrypoint: ["/bin/sh", "-c"]
+  variables:
+    APIKEY: "$SERVICE_APIKEY"
+    DB_USER: "$SERVICE_DB_USER"
+    DB_DATABASE: "$SERVICE_DB_DATABASE"
+    DB_PASSWORD: "$SERVICE_DB_PASSWORD"
+    MYSQL_PASSWORD: "$SERVICE_DB_PASSWORD"
+    SMS_SERVER_URI: "$SERVICE_SMS_SERVER_URI"
+    SMS_TOKEN: "$SERVICE_SMS_TOKEN"
+    ENTRY_GATE_IPS: "$SERVICE_ENTRY_GATE_IPS"
+    EXIT_GATE_IPS: "$SERVICE_EXIT_GATE_IPS"
+    FF_NETWORK_PER_BUILD: 1 # Permit service-to-service networking
+    # Service definitions (services cannot be aliased through variables)
+    DB_HOST: integration-db
+    LISTEN_PORT: 3000
+    SERVER_URL: "http://integration-server:$LISTEN_PORT"
+    FRONTEND_URL: "http://integration-frontend"
+  services:
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-test-db:empty"
+      alias: integration-db
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-server:master"
+      alias: integration-server
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-backend:master"
+      alias: integration-backend
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-frontend/tp-frontend-$APP:$CI_COMMIT_REF_SLUG"
+      alias: integration-frontend
+  script:
+    - /opt/testcafe/docker/testcafe-docker.sh firefox:headless,chromium:headless tests/e2e/"$APP"/'*.e2e.ts'
+
+.trigger-e2e:
+  stage: e2e
+  image: alpine:3
+  variables:
+    # Change these to temporarily run E2E-test repo with non-master branches
+    E2E_SERVER_REF: master
+    E2E_BACKEND_REF: master
+  before_script:
+    # Change slashes into hyphens for E2E-test repo
+    - 'E2E_SERVER_REF_SLUG=$(echo $E2E_SERVER_REF | sed -e "s/\//-/g" | sed -e "s/\(.*\)/\L\1/")'
+    - 'E2E_BACKEND_REF_SLUG=$(echo $E2E_BACKEND_REF | sed -e "s/\//-/g" | sed -e "s/\(.*\)/\L\1/")'
+  script:
+    - apk --no-cache add curl
+    - >
+      curl -X POST --fail
+      --form token=$E2E_PIPELINE_TOKEN
+      --form "ref=master"
+      --form "variables[SERVER_REF]=$E2E_SERVER_REF"
+      --form "variables[SERVER_REF_SLUG]=$E2E_SERVER_REF_SLUG"
+      --form "variables[BACKEND_REF]=$E2E_BACKEND_REF"
+      --form "variables[BACKEND_REF_SLUG]=$E2E_BACKEND_REF_SLUG"
+      --form "variables[FRONTEND_REF]=$CI_COMMIT_REF_NAME"
+      --form "variables[FRONTEND_REF_SLUG]=$CI_COMMIT_REF_SLUG"
+      https://gitlab.yobitti.fi/api/v4/projects/70/trigger/pipeline
+
+.deploy-staging:
+  stage: deploy
+  image: alpine:3
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    #    - if: '$CI_COMMIT_BRANCH == ""' # Add your branch here to enable automatic deployment to staging while developing a feature. Remember to comment after use!
+    - if: '$CI_COMMIT_BRANCH != null'
+      when: manual
+      allow_failure: true # Manual deployments are always optional
+  script:
+    - apk --no-cache add openssh
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "docker login $CI_REGISTRY -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD"
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "IMAGE_TAG=:$CI_COMMIT_REF_SLUG docker-compose -f /docker/truck-parking/docker-compose.yml pull $APP"
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "IMAGE_TAG=:$CI_COMMIT_REF_SLUG docker-compose -f /docker/truck-parking/docker-compose.yml up -d $APP"
+    - ssh -p 2222 deployer@remote-dev.yobitti.fi "docker logout $CI_REGISTRY"
+  environment:
+    name: "staging-$APP"
+    url: "$APP_URL"
+
+.a11y:
+  stage: accessibility
+  image: registry.gitlab.com/gitlab-org/ci-cd/accessibility:6.1.1
+  allow_failure: true
+  artifacts:
+    when: always
+    expose_as: 'Accessibility Reports'
+    paths: [ 'reports/' ]
+    reports:
+      accessibility: reports/gl-accessibility.json
+  variables:
+    APIKEY: "$SERVICE_APIKEY"
+    DB_USER: "$SERVICE_DB_USER"
+    DB_DATABASE: "$SERVICE_DB_DATABASE"
+    DB_PASSWORD: "$SERVICE_DB_PASSWORD"
+    MYSQL_PASSWORD: "$SERVICE_DB_PASSWORD"
+    SMS_SERVER_URI: "$SERVICE_SMS_SERVER_URI"
+    SMS_TOKEN: "$SERVICE_SMS_TOKEN"
+    ENTRY_GATE_IPS: "$SERVICE_ENTRY_GATE_IPS"
+    EXIT_GATE_IPS: "$SERVICE_EXIT_GATE_IPS"
+    FF_NETWORK_PER_BUILD: 1 # Permit service-to-service networking
+    # Service definitions (services cannot be aliased through variables)
+    DB_HOST: integration-db
+    LISTEN_PORT: 3000
+    SERVER_URL: "http://integration-server:$LISTEN_PORT"
+    FRONTEND_URL: "http://integration-frontend"
+  services:
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-test-db:empty"
+      alias: integration-db
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-server:master"
+      alias: integration-server
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-backend:master"
+      alias: integration-backend
+    - name: "gitlab.yobitti.fi:5001/truck-parking/tp-frontend/tp-frontend-$APP:$CI_COMMIT_REF_SLUG"
+      alias: integration-frontend
+  script:
+    - /gitlab-accessibility.sh "$FRONTEND_URL"

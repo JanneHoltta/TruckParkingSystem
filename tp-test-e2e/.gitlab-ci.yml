@@ -1,0 +1,90 @@
+stages:
+  - pull
+  - test
+
+variables:
+  APIKEY: "$SERVICE_APIKEY"
+  DB_USER: "$SERVICE_DB_USER"
+  DB_DATABASE: "$SERVICE_DB_DATABASE"
+  DB_PASSWORD: "$SERVICE_DB_PASSWORD"
+  MYSQL_PASSWORD: "$SERVICE_DB_PASSWORD"
+  SMS_SERVER_URI: "$SERVICE_SMS_SERVER_URI"
+  SMS_TOKEN: "$SERVICE_SMS_TOKEN"
+  FF_NETWORK_PER_BUILD: 1
+  # Service definitions
+  DB_HOST: integration-db
+  LISTEN_PORT: 3000
+  SERVER_URL: "http://integration-server:$LISTEN_PORT"
+  BACKEND_URL: "http://integration-backend:$LISTEN_PORT"
+  FRONTEND_URL: "http://integration-frontend"
+  # Default branches to run the tests against, these are overriden with the triggers from other repos
+  SERVER_REF: "master"
+  BACKEND_REF: "master"
+  FRONTEND_REF: "master"
+  SERVER_REF_SLUG: "master"
+  BACKEND_REF_SLUG: "master"
+  FRONTEND_REF_SLUG: "master"
+
+pull:
+  stage: pull
+  image: node:16
+  script:
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.yobitti.fi/truck-parking/tp-server
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.yobitti.fi/truck-parking/tp-backend
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.yobitti.fi/truck-parking/tp-frontend
+    - cd tp-server && git checkout $SERVER_REF
+    - cd ../tp-backend && git checkout $BACKEND_REF
+    - cd ../tp-frontend && git checkout $FRONTEND_REF
+  artifacts:
+    paths:
+      - tp-server/
+      - tp-backend/
+      - tp-frontend/
+
+test-server:
+  stage: test
+  image: node:16
+  services:
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-test-db:empty
+      alias: integration-db
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-server:${SERVER_REF_SLUG}
+      alias: integration-server
+  script:
+    - echo -e "$NPM_REPO" > ~/.npmrc
+    - cd tp-server
+    - npm install
+    - npm run integration
+
+test-backend:
+  stage: test
+  image: node:16
+  services:
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-test-db:empty
+      alias: integration-db
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-server:${SERVER_REF_SLUG}
+      alias: integration-server
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-backend:${BACKEND_REF_SLUG}
+      alias: integration-backend
+  script:
+    - echo -e "$NPM_REPO" > ~/.npmrc
+    - cd tp-backend
+    - npm install
+    - npm run integration
+
+test-frontend:
+  stage: test
+  image:
+    name: testcafe/testcafe
+    entrypoint: [ "/bin/sh", "-c" ]
+  services:
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-test-db:empty
+      alias: integration-db
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-server:${SERVER_REF_SLUG}
+      alias: integration-server
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-backend:${BACKEND_REF_SLUG}
+      alias: integration-backend
+    - name: gitlab.yobitti.fi:5001/truck-parking/tp-frontend:${FRONTEND_REF_SLUG}
+      alias: integration-frontend
+  script:
+    - cd tp-frontend
+    - /opt/testcafe/docker/testcafe-docker.sh firefox:headless,chromium:headless 'tests/e2e/*.ts'

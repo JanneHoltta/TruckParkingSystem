@@ -1,0 +1,53 @@
+@import "src/common/styles/variables.scss";
+
+// Manually set each button's content/text to be white. This is required due to a bug in Vuetify 2.
+.v-btn__content {
+  color: white;
+}
+
+// Set custom background and text colors for v-cards
+.theme--light.v-card {
+  background-color: #dedede !important;
+}
+.theme--light.v-card > .v-card__text, .theme--light.v-card > .v-card__subtitle {
+  color: black !important;
+}
+.theme--dark.v-card {
+  background-color: #1c1c1c !important;
+}
+.theme--dark.v-card > .v-card__text, .theme--dark.v-card > .v-card__subtitle {
+  color: white !important;
+}
+
+// Set custom header and content colors for v-expansion-panels
+.theme--light .v-expansion-panel-header {
+  background-color: #7eadc4 !important;
+}
+.theme--light .v-expansion-panel-content {
+  background-color: #a9cadb !important;
+}
+.theme--dark .v-expansion-panel-header {
+  background-color: #2f434d !important;
+}
+.theme--dark .v-expansion-panel-content {
+  background-color: #253138 !important;
+}
+
+.v-divider {
+  margin: 20px 0;
+}
+
+// Globals
+$body-font-family: 'Roboto', sans-serif;
+
+// Variables must come before the import
+$headings: (
+'h1': (
+'size': 3.3125rem,
+'line-height': 1.15em
+),
+'h2': (
+'size': 2.25rem,
+'line-height': 1.5em
+)
+);
